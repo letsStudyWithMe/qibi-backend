@@ -31,10 +31,8 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 
 /**
- * 帖子接口
+ * 图表信息接口
  *
- * @author <a href="https://github.com/liyupi">程序员鱼皮</a>
- * @from <a href="https://yupi.icu">编程导航知识星球</a>
  */
 @RestController
 @RequestMapping("/chart")
@@ -49,7 +47,6 @@ public class ChartController {
 
     private final static Gson GSON = new Gson();
 
-    // region 增删改查
 
     /**
      * 创建

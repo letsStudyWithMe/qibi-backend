@@ -36,8 +36,6 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 用户接口
  *
- * @author <a href="https://github.com/liyupi">程序员鱼皮</a>
- * @from <a href="https://yupi.icu">编程导航知识星球</a>
  */
 @RestController
 @RequestMapping("/user")
@@ -46,8 +44,6 @@ public class UserController {
 
     @Resource
     private UserService userService;
-
-    // region 登录相关
 
     /**
      * 用户注册
@@ -117,10 +113,6 @@ public class UserController {
         User user = userService.getLoginUser(request);
         return ResultUtils.success(userService.getLoginUserVO(user));
     }
-
-    // endregion
-
-    // region 增删改查
 
     /**
      * 创建用户
