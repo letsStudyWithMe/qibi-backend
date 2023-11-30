@@ -17,9 +17,7 @@ import com.qi.springbootinit.model.dto.chart.xunfei.request.payload.Payload;
 import com.qi.springbootinit.model.dto.chart.xunfei.response.Result;
 import com.qi.springbootinit.model.dto.chart.xunfei.response.payload.Text;
 import lombok.extern.slf4j.Slf4j;
-import org.java_websocket.WebSocket;
 import org.java_websocket.client.WebSocketClient;
-import org.java_websocket.drafts.Draft;
 import org.java_websocket.handshake.ServerHandshake;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -81,46 +79,24 @@ public class XunFeiBigModelUtils {
      */
     public static List<RoleContent> historyList = new LinkedList<>();
 
-/*    public static void main(String[] args) throws MalformedURLException, URISyntaxException {
-        System.out.println("您好，这里是星火认知大模型，请问有什么可以帮您的吗？");
-      *//*  while (true) {
-            Scanner scanner = new Scanner(System.in);
-            String content = scanner.nextLine();
-            // 如果键入“结束对话”，则跳出循环，终止程序
-            if (Objects.equals(content, "结束对话")) {
-                System.out.println("好的，再见！");
-                break;
-            }
-            System.out.println("我:" + content);
+    /**
+     * 需要的结果存储集合
+     */
+    public static List<RoleContent> resultList = new LinkedList<>();
+
+
+    //调用星火助手
+    public static List<RoleContent> getEchartsResult(String content){
+        try {
             websocketClient(getAuthUrl(), createReqParams(content));
-        }*//*
-        String content = "分析需求：\n" +
-                "分析网站用户的增长情况\n" +
-                "原始数据：\n" +
-                "日期，用户数\n" +
-                "1号，10\n" +
-                "2号，20\n" +
-                "3号，30\n" ;
-        websocketClient(getAuthUrl(), createReqParams(content));
-    }*/
-
-    public static void main(String[] args) throws MalformedURLException, URISyntaxException {
-        String content = "分析需求：\n" +
-                "分析网站用户的增长情况\n" +
-                "原始数据：\n" +
-                "日期，用户数\n" +
-                "1号，10\n" +
-                "2号，20\n" +
-                "3号，30\n" ;
-        List<RoleContent> roleContents = main111(content);
-        for (RoleContent roleContent : roleContents) {
-            System.out.println(roleContent.getContent());
+            while (resultList.isEmpty()){
+                Thread.sleep(5000);
+            }
+        } catch (Exception e) {
+            log.info("调用星火助手发生异常"+e.toString());
+            return null;
         }
-    }
-
-    public static List<RoleContent>  main111(String content) throws MalformedURLException, URISyntaxException {
-        websocketClient(getAuthUrl(), createReqParams(content));
-        return historyList;
+        return resultList;
     }
 
     /**
@@ -133,13 +109,11 @@ public class XunFeiBigModelUtils {
      private static void websocketClient(String authUrl, String reqParams) throws URISyntaxException {
         String url = authUrl.replace("http://", "ws://").replace("https://", "wss://");
         URI uri = new URI(url);
-
         WebSocketClient webSocketClient = new WebSocketClient(uri) {
-
             @Override
             public void onOpen(ServerHandshake serverHandshake) {
                 RESULT_LINKED_LIST.clear();
-                historyList.clear();
+                resultList.clear();
                 send(reqParams);
             }
 
@@ -166,7 +140,7 @@ public class XunFeiBigModelUtils {
 
             @Override
             public void onClose(int i, String s, boolean b) {
-                // log.info("WebSocket连接已关闭，原因：{}，状态码：{}，是否远程关闭：{}", i, s, b);
+                log.info("WebSocket连接已关闭，原因：{}，状态码：{}，是否远程关闭：{}", i, s, b);
             }
 
             @Override
@@ -176,8 +150,6 @@ public class XunFeiBigModelUtils {
         };
         webSocketClient.connect();
     }
-
-
 
     /**
      * 生成请求参数
@@ -196,7 +168,18 @@ public class XunFeiBigModelUtils {
         parameter.setChat(chat);
 
         Message message = new Message();
+        if (historyList.isEmpty()) {
+            com.qi.springbootinit.model.dto.chart.xunfei.request.payload.Text text = new com.qi.springbootinit.model.dto.chart.xunfei.request.payload.Text();
+            text.setRole(ROLE_USER);
+            text.setContent(content);
+            message.setText(Collections.singletonList(text));
 
+            // 添加历史对话集合
+            RoleContent roleContent = new RoleContent();
+            roleContent.setRole(ROLE_USER);
+            roleContent.setContent(content);
+            historyList.add(roleContent);
+        } else {
             // 添加历史对话集合
             RoleContent roleContent = new RoleContent();
             roleContent.setRole(ROLE_USER);
@@ -213,7 +196,7 @@ public class XunFeiBigModelUtils {
                     })
                     .collect(Collectors.toList());
             message.setText(textList);
-
+        }
 
         Payload payload = new Payload();
         payload.setMessage(message);
@@ -224,7 +207,6 @@ public class XunFeiBigModelUtils {
         request.setPayload(payload);
         return JSONObject.toJSONString(request);
     }
-
 
     /**
      * URL鉴权
@@ -284,6 +266,7 @@ public class XunFeiBigModelUtils {
         roleContent.setRole(ROLE_ASSISTANT);
         roleContent.setContent(content);
         historyList.add(roleContent);
+        resultList.add(roleContent);
     }
 
 }

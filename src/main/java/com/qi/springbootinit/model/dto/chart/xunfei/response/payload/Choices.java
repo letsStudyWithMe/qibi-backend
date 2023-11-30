@@ -6,8 +6,6 @@ import java.util.StringJoiner;
 /**
  * choices部分
  *
- * @author Linzj
- * @date 2023/10/19/019 16:43
  */
 public class Choices {
 

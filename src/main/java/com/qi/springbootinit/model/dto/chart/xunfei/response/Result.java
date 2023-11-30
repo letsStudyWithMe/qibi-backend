@@ -9,8 +9,6 @@ import java.util.StringJoiner;
 /**
  * 接口响应对象
  *
- * @author Linzj
- * @date 2023/10/19/019 16:52
  */
 public class Result {
 

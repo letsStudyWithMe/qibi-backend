@@ -5,8 +5,6 @@ import java.util.List;
 /**
  * message部分
  *
- * @author Linzj
- * @date 2023/10/20/020 10:19
  */
 public class Message {
 

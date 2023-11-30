@@ -6,8 +6,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 /**
  * header部分
  *
- * @author Linzj
- * @date 2023/10/20/020 10:11
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class Header {

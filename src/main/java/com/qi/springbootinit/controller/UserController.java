@@ -5,7 +5,6 @@ import com.qi.springbootinit.common.BaseResponse;
 import com.qi.springbootinit.common.DeleteRequest;
 import com.qi.springbootinit.common.ErrorCode;
 import com.qi.springbootinit.common.ResultUtils;
-import com.qi.springbootinit.config.WxOpenConfig;
 import com.qi.springbootinit.constant.UserConstant;
 import com.qi.springbootinit.exception.BusinessException;
 import com.qi.springbootinit.model.entity.User;

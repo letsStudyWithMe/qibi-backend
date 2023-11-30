@@ -3,8 +3,6 @@ package com.qi.springbootinit.model.dto.chart.xunfei.request.payload;
 /**
  * text 部分
  *
- * @author Linzj
- * @date 2023/10/20/020 10:20
  */
 public class Text {
 

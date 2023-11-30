@@ -7,8 +7,6 @@ import java.util.StringJoiner;
 /**
  * 整体对话数据
  *
- * @author Linzj
- * @date 2023/10/19/019 16:48
  */
 public class Text {
 

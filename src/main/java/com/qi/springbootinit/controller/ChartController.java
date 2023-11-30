@@ -1,6 +1,5 @@
 package com.qi.springbootinit.controller;
 
-import cn.hutool.core.io.FileUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.google.gson.Gson;
@@ -9,23 +8,22 @@ import com.qi.springbootinit.common.DeleteRequest;
 import com.qi.springbootinit.common.ErrorCode;
 import com.qi.springbootinit.common.ResultUtils;
 import com.qi.springbootinit.constant.CommonConstant;
-import com.qi.springbootinit.constant.FileConstant;
 import com.qi.springbootinit.constant.UserConstant;
 import com.qi.springbootinit.exception.BusinessException;
 import com.qi.springbootinit.model.dto.chart.*;
-import com.qi.springbootinit.model.dto.file.UploadFileRequest;
+import com.qi.springbootinit.model.dto.chart.xunfei.RoleContent;
 import com.qi.springbootinit.model.entity.Chart;
 import com.qi.springbootinit.model.entity.User;
-import com.qi.springbootinit.model.enums.FileUploadBizEnum;
+import com.qi.springbootinit.model.vo.BiResponse;
 import com.qi.springbootinit.service.ChartService;
 import com.qi.springbootinit.service.UserService;
 import com.qi.springbootinit.utils.ExcelUtils;
 import com.qi.springbootinit.utils.SqlUtils;
 import com.qi.springbootinit.annotation.AuthCheck;
 import com.qi.springbootinit.exception.ThrowUtils;
+import com.qi.springbootinit.utils.XunFeiBigModelUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
@@ -33,8 +31,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
-import java.io.File;
-import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
 
 /**
  * 图表信息接口
@@ -184,8 +182,6 @@ public class ChartController {
         return ResultUtils.success(chartPage);
     }
 
-    // endregion
-
     /**
      * 编辑（用户）
      *
@@ -252,7 +248,7 @@ public class ChartController {
      * @return
      */
     @PostMapping("/gen")
-    public BaseResponse<String> genChartByAi(@RequestPart("file") MultipartFile multipartFile,
+    public BaseResponse<BiResponse> genChartByAi(@RequestPart("file") MultipartFile multipartFile,
                                              ChartGenByAiRequest chartGenByAiRequest, HttpServletRequest request) {
         String name = chartGenByAiRequest.getName();
         String chartType = chartGenByAiRequest.getChartType();
@@ -263,33 +259,51 @@ public class ChartController {
         ThrowUtils.throwIf(StringUtils.isBlank(goal),ErrorCode.PARAMS_ERROR,"目标为空");
         ThrowUtils.throwIf(StringUtils.isBlank(name),ErrorCode.PARAMS_ERROR,"名称为空");
 
+        //登陆才可以使用
+        User loginUser = userService.getLoginUser(request);
+
         // 构建⽤户输入信息
         StringBuilder userInput = new StringBuilder();
-        userInput.append("你是⼀个数据分析师，接下来我会给你我的分析⽬标和原始数据，请告诉我分析结论.").append("\n");
-        userInput.append("分析⽬标：").append(goal).append("\n");
+        userInput.append("分析需求：").append("\n");
+        if (StringUtils.isNotBlank(chartType)){
+            userInput.append(goal).append("请使用"+chartType).append(",要生成图例，图例与标题不能重叠");
+        }
         // 压缩后的数据（将multipartFile转换为CSV格式）
-        String result = ExcelUtils.excelToCsv(multipartFile);
-        userInput.append("数据：").append(result).append("\n");
+        String csvData = ExcelUtils.excelToCsv(multipartFile);
+        userInput.append("原始数据：").append(csvData).append("\n");
 
-        return ResultUtils.success(userInput.toString());
-       /* User loginUser = userService.getLoginUser(request);
-        String uuid = RandomStringUtils.randomAlphanumeric(8);
-        String fileName = uuid+"-"+multipartFile.getOriginalFilename();
-        File file = null;
-        try {
-            return ResultUtils.success("");
-        } catch (Exception e) {
-            //log.error("file upload error, filepath = " + filepath, e);
-            throw new BusinessException(ErrorCode.SYSTEM_ERROR,"上传失败");
-        } finally {
-            if (file != null){
-                //删除临时文件
-                boolean delete = file.delete();
-                if (!delete){
+        //调用AI接口
+        List<RoleContent> echartsResult = XunFeiBigModelUtils.getEchartsResult(userInput.toString());
+        if (echartsResult == null){
+            return ResultUtils.error(ErrorCode.SPARK_USE_ERROR);
+        }
+        String res = echartsResult.get(0).getContent();
+        if (res.contains("】")){
+            res = res.replace("】", "【");
+        }
+        String[] split = res.split("【【【【【");
+        if (split.length < 3){
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR,"AI生成错误");
+        }
 
-                }
-            }
-        }*/
-
+        //保存图表信息
+        String genChart = split[1];
+        String genResult = split[2];
+        Chart chart = new Chart();
+        chart.setChartType(chartType);
+        chart.setChartData(csvData);
+        chart.setGenChart(genChart);
+        chart.setGenResult(genResult);
+        chart.setGoal(goal);
+        chart.setUserId(loginUser.getId());
+        chart.setCreateTime(new Date());
+        chart.setName(name);
+        boolean saveResult = chartService.save(chart);
+        ThrowUtils.throwIf(!saveResult,ErrorCode.SYSTEM_ERROR,"图表保存失败");
+        BiResponse biResponse = new BiResponse();
+        biResponse.setGenChart(genChart);
+        biResponse.setGenResult(genResult);
+        biResponse.setChartId(chart.getId());
+        return ResultUtils.success(biResponse);
     }
 }

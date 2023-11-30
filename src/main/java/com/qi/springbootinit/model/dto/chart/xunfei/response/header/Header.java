@@ -5,8 +5,6 @@ import java.util.StringJoiner;
 /**
  * header部分
  *
- * @author Linzj
- * @date 2023/10/19/019 16:41
  */
 public class Header {
 

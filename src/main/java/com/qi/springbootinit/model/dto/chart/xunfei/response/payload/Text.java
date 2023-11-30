@@ -5,8 +5,6 @@ import java.util.StringJoiner;
 /**
  * 文本信息
  *
- * @author Linzj
- * @date 2023/10/19/019 16:46
  */
 public class Text {
 

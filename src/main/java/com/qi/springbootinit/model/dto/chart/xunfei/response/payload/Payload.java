@@ -10,8 +10,6 @@ import java.util.StringJoiner;
 /**
  * Payload 部分
  *
- * @author Linzj
- * @date 2023/10/19/019 16:55
  */
 public class Payload {
 

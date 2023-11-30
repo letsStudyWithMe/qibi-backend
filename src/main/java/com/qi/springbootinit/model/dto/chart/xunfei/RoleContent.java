@@ -3,8 +3,6 @@ package com.qi.springbootinit.model.dto.chart.xunfei;
 /**
  * 对话记录
  *
- * @author Linzj
- * @date 2023/10/20/020 11:10
  */
 public class RoleContent {
 

@@ -6,8 +6,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 /**
  * chat 部分
  *
- * @author Linzj
- * @date 2023/10/20/020 10:13
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class Chat {

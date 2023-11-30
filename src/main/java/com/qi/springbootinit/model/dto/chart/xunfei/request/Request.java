@@ -8,8 +8,6 @@ import com.qi.springbootinit.model.dto.chart.xunfei.request.payload.Payload;
 /**
  * 大模型请求实体
  *
- * @author Linzj
- * @date 2023/10/20/020 10:23
  */
 public class Request {
 
