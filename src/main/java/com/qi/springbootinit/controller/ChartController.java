@@ -247,7 +247,7 @@ public class ChartController {
      * @param request
      * @return
      */
-    @PostMapping("/gen")
+    @PostMapping("/genChartByAi")
     public BaseResponse<BiResponse> genChartByAi(@RequestPart("file") MultipartFile multipartFile,
                                              ChartGenByAiRequest chartGenByAiRequest, HttpServletRequest request) {
         String name = chartGenByAiRequest.getName();
