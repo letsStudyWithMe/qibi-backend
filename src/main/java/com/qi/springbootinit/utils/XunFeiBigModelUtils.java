@@ -40,7 +40,7 @@ public class XunFeiBigModelUtils {
     private static final String HOST_URL = "http://spark-openapi.cn-huabei-1.xf-yun.com/v1/assistants/c3po5ycuf95c_v1";
 
     /**
-     * v3版本
+     * v1版本
      */
     private static final String DOMAIN_1 = "generalv1";
 
@@ -87,6 +87,7 @@ public class XunFeiBigModelUtils {
 
     //调用星火助手
     public static List<RoleContent> getEchartsResult(String content){
+        resultList.clear();
         try {
             websocketClient(getAuthUrl(), createReqParams(content));
             while (resultList.isEmpty()){
@@ -113,7 +114,6 @@ public class XunFeiBigModelUtils {
             @Override
             public void onOpen(ServerHandshake serverHandshake) {
                 RESULT_LINKED_LIST.clear();
-                resultList.clear();
                 send(reqParams);
             }
 
