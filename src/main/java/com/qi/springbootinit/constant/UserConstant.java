@@ -21,7 +21,7 @@ public interface UserConstant {
     /**
      * 管理员角色
      */
-    String ADMIN_ROLE = "admin";
+    String ROOT_ROLE = "root";
 
     /**
      * 被封号

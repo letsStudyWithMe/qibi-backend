@@ -54,7 +54,7 @@ public class AuthInterceptor {
                 throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
             }
             // 必须有管理员权限
-            if (UserRoleEnum.ADMIN.equals(mustUserRoleEnum)) {
+            if (UserRoleEnum.ROOT.equals(mustUserRoleEnum)) {
                 if (!mustRole.equals(userRole)) {
                     throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
                 }

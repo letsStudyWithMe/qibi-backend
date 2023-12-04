@@ -106,7 +106,7 @@ public class ChartController {
      * @return
      */
     @PostMapping("/update")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @AuthCheck(mustRole = UserConstant.ROOT_ROLE)
     public BaseResponse<Boolean> updateChart(@RequestBody ChartUpdateRequest chartUpdateRequest) {
         if (chartUpdateRequest == null || chartUpdateRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
@@ -260,7 +260,12 @@ public class ChartController {
         ThrowUtils.throwIf(StringUtils.isBlank(name),ErrorCode.PARAMS_ERROR,"名称为空");
 
         //登陆才可以使用
-        User loginUser = userService.getLoginUser(request);
+        User loginUser = null;
+        try {
+            loginUser = userService.getLoginUser(request);
+        } catch (Exception e) {
+            return ResultUtils.error(ErrorCode.NOT_LOGIN_ERROR);
+        }
 
         // 构建⽤户输入信息
         StringBuilder userInput = new StringBuilder();

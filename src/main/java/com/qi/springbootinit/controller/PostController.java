@@ -111,7 +111,7 @@ public class PostController {
      * @return
      */
     @PostMapping("/update")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @AuthCheck(mustRole = UserConstant.ROOT_ROLE)
     public BaseResponse<Boolean> updatePost(@RequestBody PostUpdateRequest postUpdateRequest) {
         if (postUpdateRequest == null || postUpdateRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
