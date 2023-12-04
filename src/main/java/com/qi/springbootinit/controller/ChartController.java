@@ -3,6 +3,7 @@ package com.qi.springbootinit.controller;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.google.gson.Gson;
+import com.qi.springbootinit.annotation.AuthCheck;
 import com.qi.springbootinit.common.BaseResponse;
 import com.qi.springbootinit.common.DeleteRequest;
 import com.qi.springbootinit.common.ErrorCode;
@@ -10,6 +11,7 @@ import com.qi.springbootinit.common.ResultUtils;
 import com.qi.springbootinit.constant.CommonConstant;
 import com.qi.springbootinit.constant.UserConstant;
 import com.qi.springbootinit.exception.BusinessException;
+import com.qi.springbootinit.exception.ThrowUtils;
 import com.qi.springbootinit.model.dto.chart.*;
 import com.qi.springbootinit.model.dto.chart.xunfei.RoleContent;
 import com.qi.springbootinit.model.entity.Chart;
@@ -19,8 +21,6 @@ import com.qi.springbootinit.service.ChartService;
 import com.qi.springbootinit.service.UserService;
 import com.qi.springbootinit.utils.ExcelUtils;
 import com.qi.springbootinit.utils.SqlUtils;
-import com.qi.springbootinit.annotation.AuthCheck;
-import com.qi.springbootinit.exception.ThrowUtils;
 import com.qi.springbootinit.utils.XunFeiBigModelUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
@@ -36,7 +36,6 @@ import java.util.List;
 
 /**
  * 图表信息接口
- *
  */
 @RestController
 @RequestMapping("/chart")
@@ -148,7 +147,7 @@ public class ChartController {
      */
     @PostMapping("/list/page")
     public BaseResponse<Page<Chart>> listChartByPage(@RequestBody ChartQueryRequest chartQueryRequest,
-            HttpServletRequest request) {
+                                                     HttpServletRequest request) {
         long current = chartQueryRequest.getCurrent();
         long size = chartQueryRequest.getPageSize();
         // 限制爬虫
@@ -167,7 +166,7 @@ public class ChartController {
      */
     @PostMapping("/my/list/page")
     public BaseResponse<Page<Chart>> listMyChartByPage(@RequestBody ChartQueryRequest chartQueryRequest,
-            HttpServletRequest request) {
+                                                       HttpServletRequest request) {
         if (chartQueryRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
@@ -249,15 +248,15 @@ public class ChartController {
      */
     @PostMapping("/genChartByAi")
     public BaseResponse<BiResponse> genChartByAi(@RequestPart("file") MultipartFile multipartFile,
-                                             ChartGenByAiRequest chartGenByAiRequest, HttpServletRequest request) {
+                                                 ChartGenByAiRequest chartGenByAiRequest, HttpServletRequest request) {
         String name = chartGenByAiRequest.getName();
         String chartType = chartGenByAiRequest.getChartType();
         String goal = chartGenByAiRequest.getGoal();
 
         //校验
-        ThrowUtils.throwIf(StringUtils.isNotBlank(name) && name.length() > 100 ,ErrorCode.PARAMS_ERROR,"名称过长");
-        ThrowUtils.throwIf(StringUtils.isBlank(goal),ErrorCode.PARAMS_ERROR,"目标为空");
-        ThrowUtils.throwIf(StringUtils.isBlank(name),ErrorCode.PARAMS_ERROR,"名称为空");
+        ThrowUtils.throwIf(StringUtils.isNotBlank(name) && name.length() > 100, ErrorCode.PARAMS_ERROR, "名称过长");
+        ThrowUtils.throwIf(StringUtils.isBlank(goal), ErrorCode.PARAMS_ERROR, "目标为空");
+        ThrowUtils.throwIf(StringUtils.isBlank(name), ErrorCode.PARAMS_ERROR, "名称为空");
 
         //登陆才可以使用
         User loginUser = null;
@@ -270,25 +269,28 @@ public class ChartController {
         // 构建⽤户输入信息
         StringBuilder userInput = new StringBuilder();
         userInput.append("分析需求：").append("\n");
-        if (StringUtils.isNotBlank(chartType)){
-            userInput.append(goal).append("请使用"+chartType).append(",要生成图例，图例与标题不能重叠");
+        if (StringUtils.isNotBlank(chartType)) {
+            userInput.append(goal).append("请使用" + chartType).append(",要生成图例，图例与标题不能重叠").append("\n");
         }
         // 压缩后的数据（将multipartFile转换为CSV格式）
         String csvData = ExcelUtils.excelToCsv(multipartFile);
+        if ("表格转换错误".equals(csvData)) {
+            return ResultUtils.error(ErrorCode.SYSTEM_ERROR, "表格转换错误");
+        }
         userInput.append("原始数据：").append(csvData).append("\n");
 
         //调用AI接口
         List<RoleContent> echartsResult = XunFeiBigModelUtils.getEchartsResult(userInput.toString());
-        if (echartsResult == null){
+        if (echartsResult == null) {
             return ResultUtils.error(ErrorCode.SPARK_USE_ERROR);
         }
         String res = echartsResult.get(0).getContent();
-        if (res.contains("】")){
+        if (res.contains("】")) {
             res = res.replace("】", "【");
         }
-        String[] split = res.split("【【【【【");
-        if (split.length < 3){
-            throw new BusinessException(ErrorCode.SYSTEM_ERROR,"AI生成错误");
+        String[] split = res.split("【【【【【【【");
+        if (split.length < 3) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "AI生成错误");
         }
 
         //保存图表信息
@@ -304,7 +306,9 @@ public class ChartController {
         chart.setCreateTime(new Date());
         chart.setName(name);
         boolean saveResult = chartService.save(chart);
-        ThrowUtils.throwIf(!saveResult,ErrorCode.SYSTEM_ERROR,"图表保存失败");
+        if (!saveResult) {
+            return ResultUtils.error(ErrorCode.SYSTEM_ERROR, "图表保存失败");
+        }
         BiResponse biResponse = new BiResponse();
         biResponse.setGenChart(genChart);
         biResponse.setGenResult(genResult);

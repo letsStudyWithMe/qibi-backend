@@ -3,13 +3,11 @@ package com.qi.springbootinit.utils;
 import cn.hutool.core.collection.CollUtil;
 import com.alibaba.excel.EasyExcel;
 import com.alibaba.excel.support.ExcelTypeEnum;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.util.ResourceUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,20 +16,22 @@ import java.util.stream.Collectors;
 /**
  * Excel工具
  */
+@Slf4j
 public class ExcelUtils {
 
     public static String excelToCsv(MultipartFile multipartFile) {
-        File file = null;
+        List<Map<Integer, String>> list = null;
         try {
-            file = ResourceUtils.getFile("classpath:网站数据.xlsx");
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
+            list = EasyExcel.read(multipartFile.getInputStream())
+                    .excelType(ExcelTypeEnum.XLSX)
+                    .sheet()
+                    .headRowNumber(0)
+                    .doReadSync();
+        } catch (Exception e) {
+            log.error("表格转换错误"+e.toString());
+            return "表格转换错误";
         }
-        List<Map<Integer, String>> list = EasyExcel.read(file)
-                .excelType(ExcelTypeEnum.XLSX)
-                .sheet()
-                .headRowNumber(0)
-                .doReadSync();
+
         if (CollUtil.isEmpty(list)) {
             return "";
         }
