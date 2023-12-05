@@ -164,20 +164,29 @@ public class ChartController {
      * @param request
      * @return
      */
-    @PostMapping("/my/list/page")
-    public BaseResponse<Page<Chart>> listMyChartByPage(@RequestBody ChartQueryRequest chartQueryRequest,
+    @PostMapping("/user/list/page")
+    public BaseResponse<Page<Chart>> listUserChartByPage(@RequestBody ChartQueryRequest chartQueryRequest,
                                                        HttpServletRequest request) {
         if (chartQueryRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         User loginUser = userService.getLoginUser(request);
-        chartQueryRequest.setUserId(loginUser.getId());
+
         long current = chartQueryRequest.getCurrent();
         long size = chartQueryRequest.getPageSize();
         // 限制爬虫
         ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
-        Page<Chart> chartPage = chartService.page(new Page<>(current, size),
-                getQueryWrapper(chartQueryRequest));
+        Page<Chart> chartPage = new Page<>();
+
+        //管理员可以查看所有图表
+        if (loginUser.getUserRole().equals("root")){
+            chartPage = chartService.page(new Page<>(current, size),
+                    getQueryWrapper(chartQueryRequest));
+        } else {
+            chartQueryRequest.setUserId(loginUser.getId());
+            chartPage = chartService.page(new Page<>(current, size),
+                    getQueryWrapper(chartQueryRequest));
+        }
         return ResultUtils.success(chartPage);
     }
 

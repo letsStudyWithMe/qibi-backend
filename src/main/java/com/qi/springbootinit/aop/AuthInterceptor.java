@@ -2,6 +2,7 @@ package com.qi.springbootinit.aop;
 
 import com.qi.springbootinit.annotation.AuthCheck;
 import com.qi.springbootinit.common.ErrorCode;
+import com.qi.springbootinit.common.ResultUtils;
 import com.qi.springbootinit.exception.BusinessException;
 import com.qi.springbootinit.model.entity.User;
 import com.qi.springbootinit.model.enums.UserRoleEnum;
@@ -46,17 +47,17 @@ public class AuthInterceptor {
         if (StringUtils.isNotBlank(mustRole)) {
             UserRoleEnum mustUserRoleEnum = UserRoleEnum.getEnumByValue(mustRole);
             if (mustUserRoleEnum == null) {
-                throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
+                return ResultUtils.error(ErrorCode.NO_AUTH_ERROR);
             }
             String userRole = loginUser.getUserRole();
             // 如果被封号，直接拒绝
             if (UserRoleEnum.BAN.equals(mustUserRoleEnum)) {
-                throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
+                return ResultUtils.error(ErrorCode.NO_AUTH_ERROR);
             }
             // 必须有管理员权限
             if (UserRoleEnum.ROOT.equals(mustUserRoleEnum)) {
                 if (!mustRole.equals(userRole)) {
-                    throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
+                    return ResultUtils.error(ErrorCode.NO_AUTH_ERROR);
                 }
             }
         }

@@ -17,14 +17,15 @@ public class UserServiceTest {
 
     @Test
     void userRegister() {
-        String userAccount = "yupi";
+        String userAccount = "ss";
         String userPassword = "";
         String checkPassword = "123456";
+        String userName = "ss";
         try {
-            long result = userService.userRegister(userAccount, userPassword, checkPassword);
+            long result = userService.userRegister(userAccount, userPassword, checkPassword,userName);
             Assertions.assertEquals(-1, result);
             userAccount = "yu";
-            result = userService.userRegister(userAccount, userPassword, checkPassword);
+            result = userService.userRegister(userAccount, userPassword, checkPassword,userName);
             Assertions.assertEquals(-1, result);
         } catch (Exception e) {
 
