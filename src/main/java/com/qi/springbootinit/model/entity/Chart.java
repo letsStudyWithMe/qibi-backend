@@ -70,6 +70,16 @@ public class Chart implements Serializable {
     @TableLogic
     private Integer isDelete;
 
+    /**
+     * 任务状态 wait，running，succeed，failed
+     */
+    private String status;
+
+    /**
+     * 执行信息
+     */
+    private String execMessage;
+
     @TableField(exist = false)
     private static final long serialVersionUID = 1L;
 
