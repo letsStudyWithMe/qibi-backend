@@ -34,10 +34,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadPoolExecutor;
 
@@ -250,7 +247,6 @@ public class ChartController {
         String sortOrder = chartQueryRequest.getSortOrder();
 
         queryWrapper.eq(id != null && id > 0, "id", id);
-        queryWrapper.eq(StringUtils.isNotBlank(name), "name", name);
         queryWrapper.eq(StringUtils.isNotBlank(goal), "goal", goal);
         queryWrapper.eq(StringUtils.isNotBlank(chartType), "chartType", chartType);
         queryWrapper.eq(ObjectUtils.isNotEmpty(userId), "userId", userId);
@@ -321,17 +317,12 @@ public class ChartController {
             return ResultUtils.error(ErrorCode.SPARK_USE_ERROR);
         }
         String res = echartsResult.get(0).getContent();
-        if (res.contains("】")) {
-            res = res.replace("】", "【");
-        }
-        String[] split = res.split("【【【【【【【");
-        if (split.length < 3) {
-            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "AI生成错误");
-        }
+
+        HashMap<String, String> genChartAndResult = getGenChartAndResult(res, 0l, 1);
+        String genChart=genChartAndResult.get("genChart");
+        String genResult=genChartAndResult.get("genResult");
 
         //保存图表信息
-        String genChart = split[1];
-        String genResult = split[2];
         Chart chart = new Chart();
         chart.setChartType(chartType);
         chart.setChartData(csvData);
@@ -404,7 +395,7 @@ public class ChartController {
         if ("表格转换错误".equals(csvData)) {
             return ResultUtils.error(ErrorCode.SYSTEM_ERROR, "表格转换错误");
         }
-        userInput.append("原始数据：").append(csvData).append("\n");
+        userInput.append("原始数据：").append("\n").append(csvData).append("\n");
 
 
 
@@ -439,15 +430,11 @@ public class ChartController {
                 handleChartUpdateError(chart.getId(), "分析失败");
             }
             String res = echartsResult.get(0).getContent();
-            if (res.contains("】")) {
-                res = res.replace("】", "【");
-            }
-            String[] split = res.split("【【【【【【【");
-            if (split.length < 3) {
-                handleChartUpdateError(chart.getId(), "AI生成错误");
-            }
-            String genChart = split[1];
-            String genResult = split[2];
+            System.out.println(res);
+
+            HashMap<String, String> genChartAndResult = getGenChartAndResult(res, chart.getId(),2);
+            String genChart=genChartAndResult.get("genChart");
+            String genResult=genChartAndResult.get("genResult");
             Chart updateChartResult = new Chart();
             updateChartResult.setId(chart.getId());
             updateChartResult.setGenChart(genChart);
@@ -461,8 +448,6 @@ public class ChartController {
         });
 
         BiResponse biResponse = new BiResponse();
-        /*biResponse.setGenChart(genChart);
-        biResponse.setGenResult(genResult);*/
         biResponse.setChartId(chart.getId());
         return ResultUtils.success(biResponse);
     }
@@ -476,5 +461,58 @@ public class ChartController {
         if (!updateResult) {
             log.error("更新图表失败状态失败"+ chartId +","+ execMessage);
         }
+    }
+
+    private HashMap<String,String> getGenChartAndResult(String res,long chartId, Integer type){
+        HashMap<String, String> result = new HashMap<>();
+        String genChart="";
+        String genResult="";
+        if (res.split("【【【【【【【").length == 2){ //AI生成会出现少一个【的情况
+            String[] split1 = res.split("【【【【【【【");
+            genResult = split1[1];
+            String[] split2 = split1[0].split("【【【【【【");
+            genChart = split2[1];
+        }else if (res.split("【").length == 3) {
+            String[] split = res.split("【");//AI生成只有两个【的情况
+            genChart = split[1];
+            genResult = split[2];
+        }else if (res.split("】】】】】】】").length == 2) {//AI生成】】】】】】】的情况
+            String[] split = res.split("】】】】】】】");
+            genResult = split[1];
+            String[] split1 = split[0].split("【【【【【【");
+            genChart = split1[1];
+        }else if (res.split("】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】").length == 2) {//AI生成】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】的情况
+            String[] split = res.split("】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】");
+            genResult = split[1];
+            String[] split1 = split[0].split("【【【【【【");
+            genChart = split1[1];
+        }else {
+            if (res.contains("】")) {//AI生成会出现】的情况。进行替换
+                res = res.replace("】", "【");
+            }
+            String[] split = res.split("【【【【【【【");//正常情况分割
+            if (split.length < 3) {
+                if (type == 1){//正常流程
+                    throw new BusinessException(ErrorCode.SYSTEM_ERROR, "AI生成错误");
+                }else if (type == 2){//线程池
+                    handleChartUpdateError(chartId, "AI生成错误");
+                }
+            }
+            genChart = split[1];
+            genResult = split[2];
+        }
+        if (genChart.contains("【") || genChart.contains("】")){
+            String replace = genChart.replace("【", "");
+            String replace1 = replace.replace("】", "");
+            genChart = replace1;
+        }
+        if (genResult.contains("【") || genResult.contains("】")){
+            String replace = genResult.replace("【", "");
+            String replace1 = replace.replace("】", "");
+            genResult = replace1;
+        }
+        result.put("genResult",genResult);
+        result.put("genChart",genChart);
+        return result;
     }
 }
