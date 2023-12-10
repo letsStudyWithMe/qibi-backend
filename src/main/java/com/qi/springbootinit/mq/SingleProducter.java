@@ -6,7 +6,7 @@ import com.rabbitmq.client.ConnectionFactory;
 
 import java.nio.charset.StandardCharsets;
 
-public class Send {
+public class SingleProducter {
 
     private final static String QUEUE_NAME = "hello";
 
