@@ -5,11 +5,14 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.google.gson.Gson;
 import com.qi.springbootinit.annotation.AuthCheck;
+import com.qi.springbootinit.bizmq.common.MqMessageProducer;
 import com.qi.springbootinit.common.BaseResponse;
 import com.qi.springbootinit.common.DeleteRequest;
 import com.qi.springbootinit.common.ErrorCode;
 import com.qi.springbootinit.common.ResultUtils;
+import com.qi.springbootinit.constant.ChartStatusConstant;
 import com.qi.springbootinit.constant.CommonConstant;
+import com.qi.springbootinit.constant.MqConstant;
 import com.qi.springbootinit.constant.UserConstant;
 import com.qi.springbootinit.exception.BusinessException;
 import com.qi.springbootinit.exception.ThrowUtils;
@@ -21,6 +24,7 @@ import com.qi.springbootinit.model.entity.User;
 import com.qi.springbootinit.model.vo.BiResponse;
 import com.qi.springbootinit.service.ChartService;
 import com.qi.springbootinit.service.UserService;
+import com.qi.springbootinit.utils.AiResultDetermineUtils;
 import com.qi.springbootinit.utils.ExcelUtils;
 import com.qi.springbootinit.utils.SqlUtils;
 import com.qi.springbootinit.utils.XunFeiBigModelUtils;
@@ -58,7 +62,9 @@ public class ChartController {
     @Resource
     private ThreadPoolExecutor threadPoolExecutor;
 
-    private final static Gson GSON = new Gson();
+    @Resource
+    private MqMessageProducer mqMessageProducer;
+
 
 
     /**
@@ -318,7 +324,7 @@ public class ChartController {
         }
         String res = echartsResult.get(0).getContent();
 
-        HashMap<String, String> genChartAndResult = getGenChartAndResult(res, 0l, 1);
+        HashMap<String, String> genChartAndResult = AiResultDetermineUtils.getGenChartAndResult(res, 0l, 1);
         String genChart=genChartAndResult.get("genChart");
         String genResult=genChartAndResult.get("genResult");
 
@@ -420,19 +426,19 @@ public class ChartController {
             chartUpdate.setStatus("running");
             boolean resUpdate = chartService.updateById(chartUpdate);
             if (!resUpdate){
-                handleChartUpdateError(chart.getId(),"更新图表执行中状态失败");
+                chartService.handleChartUpdateStatus(chart.getId(),"更新图表执行中状态失败", ChartStatusConstant.FAILED);
                 return;
             }
 
             //调用AI接口
             List<RoleContent> echartsResult = XunFeiBigModelUtils.getEchartsResult(userInput.toString());
             if (echartsResult == null) {
-                handleChartUpdateError(chart.getId(), "分析失败");
+                chartService.handleChartUpdateStatus(chart.getId(),"分析失败", ChartStatusConstant.FAILED);
             }
             String res = echartsResult.get(0).getContent();
             System.out.println(res);
 
-            HashMap<String, String> genChartAndResult = getGenChartAndResult(res, chart.getId(),2);
+            HashMap<String, String> genChartAndResult = AiResultDetermineUtils.getGenChartAndResult(res, chart.getId(),2);
             String genChart=genChartAndResult.get("genChart");
             String genResult=genChartAndResult.get("genResult");
             Chart updateChartResult = new Chart();
@@ -443,76 +449,79 @@ public class ChartController {
             updateChartResult.setExecMessage("生成成功");
             boolean updateResult = chartService.updateById(updateChartResult);
             if (!updateResult) {
-                handleChartUpdateError( chart.getId(),"更新图表成功状态失败");
+                chartService.handleChartUpdateStatus(chart.getId(),"更新图表成功状态失败", ChartStatusConstant.FAILED);
             }
-        });
+        },threadPoolExecutor);
 
         BiResponse biResponse = new BiResponse();
         biResponse.setChartId(chart.getId());
         return ResultUtils.success(biResponse);
     }
 
-    private void handleChartUpdateError(long chartId,String execMessage){
-        Chart updateChartResult = new Chart();
-        updateChartResult.setId(chartId);
-        updateChartResult.setStatus("failed");
-        updateChartResult.setExecMessage(execMessage);
-        boolean updateResult = chartService.updateById(updateChartResult);
-        if (!updateResult) {
-            log.error("更新图表失败状态失败"+ chartId +","+ execMessage);
-        }
-    }
+    /**
+     * 智能分析(RabbitMQ)
+     *
+     * @param multipartFile
+     * @param chartGenByAiRequest
+     * @param request
+     * @return
+     */
+    @PostMapping("/genChartByAiRabbitMQ")
+    public BaseResponse<BiResponse> genChartByAiRabbitMQ(@RequestPart("file") MultipartFile multipartFile,
+                                                           @Valid ChartGenByAiRequest chartGenByAiRequest, HttpServletRequest request) {
+        String name = chartGenByAiRequest.getName();
+        String chartType = chartGenByAiRequest.getChartType();
+        String goal = chartGenByAiRequest.getGoal();
 
-    private HashMap<String,String> getGenChartAndResult(String res,long chartId, Integer type){
-        HashMap<String, String> result = new HashMap<>();
-        String genChart="";
-        String genResult="";
-        if (res.split("【【【【【【【").length == 2){ //AI生成会出现少一个【的情况
-            String[] split1 = res.split("【【【【【【【");
-            genResult = split1[1];
-            String[] split2 = split1[0].split("【【【【【【");
-            genChart = split2[1];
-        }else if (res.split("【").length == 3) {
-            String[] split = res.split("【");//AI生成只有两个【的情况
-            genChart = split[1];
-            genResult = split[2];
-        }else if (res.split("】】】】】】】").length == 2) {//AI生成】】】】】】】的情况
-            String[] split = res.split("】】】】】】】");
-            genResult = split[1];
-            String[] split1 = split[0].split("【【【【【【");
-            genChart = split1[1];
-        }else if (res.split("】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】").length == 2) {//AI生成】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】的情况
-            String[] split = res.split("】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】】");
-            genResult = split[1];
-            String[] split1 = split[0].split("【【【【【【");
-            genChart = split1[1];
-        }else {
-            if (res.contains("】")) {//AI生成会出现】的情况。进行替换
-                res = res.replace("】", "【");
-            }
-            String[] split = res.split("【【【【【【【");//正常情况分割
-            if (split.length < 3) {
-                if (type == 1){//正常流程
-                    throw new BusinessException(ErrorCode.SYSTEM_ERROR, "AI生成错误");
-                }else if (type == 2){//线程池
-                    handleChartUpdateError(chartId, "AI生成错误");
-                }
-            }
-            genChart = split[1];
-            genResult = split[2];
+        //校验
+        ThrowUtils.throwIf(StringUtils.isNotBlank(name) && name.length() > 100, ErrorCode.PARAMS_ERROR, "名称过长");
+        ThrowUtils.throwIf(StringUtils.isBlank(goal), ErrorCode.PARAMS_ERROR, "目标为空");
+        ThrowUtils.throwIf(StringUtils.isBlank(name), ErrorCode.PARAMS_ERROR, "名称为空");
+
+        long size = multipartFile.getSize();//大小
+        String originalFilename = multipartFile.getOriginalFilename();//原始文件名称
+        //校验文件大小
+        final long ONE_MB=1024*1024l;
+        ThrowUtils.throwIf(size>ONE_MB,ErrorCode.PARAMS_ERROR,"文件超过1MB");
+        //校验文件格式
+        final String type = FileUtil.getSuffix(originalFilename);
+        List<String> fileType = Arrays.asList("xlsx");
+        ThrowUtils.throwIf(!fileType.contains(type),ErrorCode.PARAMS_ERROR,",文件格式不正确，请上传正确的文件格式");
+
+        //登陆才可以使用
+        User loginUser = null;
+        try {
+            loginUser = userService.getLoginUser(request);
+        } catch (Exception e) {
+            return ResultUtils.error(ErrorCode.NOT_LOGIN_ERROR);
         }
-        if (genChart.contains("【") || genChart.contains("】")){
-            String replace = genChart.replace("【", "");
-            String replace1 = replace.replace("】", "");
-            genChart = replace1;
+
+        redisLimiterManager.doRateLimit("genChartByAi_"+loginUser.getId());
+
+        // 压缩后的数据（将multipartFile转换为CSV格式）
+        String csvData = ExcelUtils.excelToCsv(multipartFile);
+        if ("表格转换错误".equals(csvData)) {
+            return ResultUtils.error(ErrorCode.SYSTEM_ERROR, "表格转换错误");
         }
-        if (genResult.contains("【") || genResult.contains("】")){
-            String replace = genResult.replace("【", "");
-            String replace1 = replace.replace("】", "");
-            genResult = replace1;
+        //保存图表信息
+        Chart chart = new Chart();
+        chart.setChartType(chartType);
+        chart.setChartData(csvData);
+        chart.setStatus("wait");
+        chart.setGoal(goal);
+        chart.setUserId(loginUser.getId());
+        chart.setCreateTime(new Date());
+        chart.setName(name);
+        boolean saveResult = chartService.save(chart);
+        if (!saveResult) {
+            return ResultUtils.error(ErrorCode.SYSTEM_ERROR, "图表保存失败");
         }
-        result.put("genResult",genResult);
-        result.put("genChart",genChart);
-        return result;
+        log.info("准备发送信息给BI队列，Message={}=======================================",chart.getId());
+        mqMessageProducer.sendMessage(MqConstant.BI_EXCHANGE_NAME,MqConstant.BI_ROUTING_KEY,String.valueOf(chart.getId()));
+
+        //返回数据参数
+        BiResponse biResponse = new BiResponse();
+        biResponse.setChartId(chart.getId());
+        return ResultUtils.success(biResponse);
     }
 }
