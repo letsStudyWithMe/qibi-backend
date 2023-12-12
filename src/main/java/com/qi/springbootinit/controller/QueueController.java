@@ -22,39 +22,39 @@ import java.util.concurrent.ThreadPoolExecutor;
 @RestController
 @RequestMapping("/queue")
 @Slf4j
-@Profile({"dev","local"})
+@Profile({"dev", "local"})
 public class QueueController {
 
     @Resource
     ThreadPoolExecutor threadPoolExecutor;
 
     @GetMapping("/add")
-    public void add(String name){
+    public void add(String name) {
         try {
-            CompletableFuture.runAsync(()->{
-                System.out.println("任务执行中"+name);
+            CompletableFuture.runAsync(() -> {
+                System.out.println("任务执行中" + name);
                 try {
                     Thread.sleep(60000);
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
-            },threadPoolExecutor);
+            }, threadPoolExecutor);
         } catch (Exception e) {
-            throw new BusinessException(ErrorCode.SYSTEM_ERROR,"系统繁忙，请稍后重试");
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "系统繁忙，请稍后重试");
         }
     }
 
     @GetMapping("/get")
-    public String get(){
-        Map<String,Object> map = new HashMap<>();
+    public String get() {
+        Map<String, Object> map = new HashMap<>();
         int size = threadPoolExecutor.getQueue().size();
-        map.put("队列长度",size);
+        map.put("队列长度", size);
         long taskCount = threadPoolExecutor.getTaskCount();
-        map.put("任务总数",taskCount);
+        map.put("任务总数", taskCount);
         long completedTaskCount = threadPoolExecutor.getCompletedTaskCount();
-        map.put("已经完成任务数",completedTaskCount);
+        map.put("已经完成任务数", completedTaskCount);
         int activeCount = threadPoolExecutor.getActiveCount();
-        map.put("正在工作的线程数",activeCount);
+        map.put("正在工作的线程数", activeCount);
         return JSONUtil.toJsonStr(map);
     }
 }

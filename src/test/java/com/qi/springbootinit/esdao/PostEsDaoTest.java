@@ -2,8 +2,7 @@ package com.qi.springbootinit.esdao;
 
 import com.qi.springbootinit.model.dto.post.PostEsDTO;
 import com.qi.springbootinit.model.dto.post.PostQueryRequest;
-import com.qi.springbootinit.model.entity.Post;
-import com.qi.springbootinit.service.PostService;
+
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;

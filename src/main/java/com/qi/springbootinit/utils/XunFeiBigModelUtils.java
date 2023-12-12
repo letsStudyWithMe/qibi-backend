@@ -6,7 +6,6 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.crypto.SecureUtil;
 import cn.hutool.crypto.digest.HMac;
 import com.alibaba.fastjson.JSONObject;
-
 import com.qi.springbootinit.model.dto.chart.xunfei.RoleContent;
 import com.qi.springbootinit.model.dto.chart.xunfei.request.Request;
 import com.qi.springbootinit.model.dto.chart.xunfei.request.header.Header;
@@ -21,14 +20,16 @@ import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.net.*;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
 /**
  * 讯飞大模型
- *
  */
 @Slf4j
 public class XunFeiBigModelUtils {
@@ -86,15 +87,15 @@ public class XunFeiBigModelUtils {
 
 
     //调用星火助手
-    public static List<RoleContent> getEchartsResult(String content){
+    public static List<RoleContent> getEchartsResult(String content) {
         resultList.clear();
         try {
             websocketClient(getAuthUrl(), createReqParams(content));
-            while (resultList.isEmpty()){
+            while (resultList.isEmpty()) {
                 Thread.sleep(5000);
             }
         } catch (Exception e) {
-            log.info("调用星火助手发生异常"+e.toString());
+            log.info("调用星火助手发生异常" + e.toString());
             return null;
         }
         return resultList;
@@ -107,7 +108,7 @@ public class XunFeiBigModelUtils {
      * @param reqParams 请求参数
      * @throws URISyntaxException 异常
      */
-     private static void websocketClient(String authUrl, String reqParams) throws URISyntaxException {
+    private static void websocketClient(String authUrl, String reqParams) throws URISyntaxException {
         String url = authUrl.replace("http://", "ws://").replace("https://", "wss://");
         URI uri = new URI(url);
         WebSocketClient webSocketClient = new WebSocketClient(uri) {
