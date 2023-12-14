@@ -50,24 +50,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 @Slf4j
 public class ChartController {
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     @Resource
     private ChartService chartService;
 
