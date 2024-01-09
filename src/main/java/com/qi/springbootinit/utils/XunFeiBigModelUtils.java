@@ -53,12 +53,12 @@ public class XunFeiBigModelUtils {
     /**
      * APISecret
      */
-    private static final String API_SECRET = "N2RhYjA2OTM5ZGQ1NTBmMTNkNmRmMzlm";
+    private static final String API_SECRET = "";
 
     /**
      * APIKey
      */
-    private static final String API_KEY = "b9257f9470f23559de7fa68a72792aa8";
+    private static final String API_KEY = "";
 
     /**
      * user表示是用户的问题
